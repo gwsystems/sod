@@ -1,12 +1,17 @@
+BASE_DIR=../
+include Makefile.wasm.inc
+
 # SOD does not generally require a Makefile to build. Just drop sod.c and its accompanying
 # header files on your source tree and you are done.
-CC = clang
-CFLAGS = -lm -Ofast -march=native -Wall -std=c99
+NCC = clang
+NCFLAGS = -I. -DCPU_FREQ=3600 -O3 -lm -DSOD_DISABLE_CNN -DLIBCOX_DISABLE_DISK_IO
+WCFLAGS = -DWASM -I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO
 
 #sod: sod.c
 #	$(CC) sod.c samples/cnn_face_detection.c -o sod_face_detect -I. $(CFLAGS)
 
 EXT = out
+WEXT = wout
 
 SAMPLES = resize_image \
 	  license_plate_detection
@@ -36,8 +41,14 @@ SAMPLES = resize_image \
 #		sobel_operator_img
 
 SAMPLESOUT = $(SAMPLES:%=%.$(EXT))
+SAMPLESWOUT = $(SAMPLES:%=%.$(WEXT))
 
-all: clean dir copy samples
+all: clean dir copy
+
+native: samples
+wasm: samples.wasm
+#	samples.wasm
+#      	samples
 
 dir:
 	mkdir -p bin/
@@ -48,8 +59,15 @@ copy:
 
 samples: $(SAMPLESOUT)
 
+samples.wasm: $(SAMPLESWOUT)
+
 %.$(EXT):
-	$(CC) $(CFLAGS) -I. -lm sod.c samples/$(@:%.$(EXT)=%.c) -o bin/$@
+	$(NCC) $(NCFLAGS) sod.c samples/$(@:%.$(EXT)=%.c) -o bin/$@
+
+%.$(WEXT):
+	$(WASMCC) $(WCFLAGS) $(WASMCFLAGS) $(OPTFLAGS) sod.c samples/$(@:%.$(WEXT)=%.c) $(DUMMY) -o bin/$(@:%.$(WEXT)=%.wasm)
+	$(SFCC) bin/$(@:%.$(WEXT)=%.wasm) -o bin/$(@:%.$(WEXT)=%.bc)
+	$(CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -D$(USE_MEM) bin/$(@:%.$(WEXT)=%.bc) $(RT_LIBC) $(RT_RT) ${MEMC} -o bin/$@
 
 clean:
 	rm -f bin/*
