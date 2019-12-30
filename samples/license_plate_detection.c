@@ -49,37 +49,49 @@ static int filter_cb(int width, int height)
 	}
 	return 1; /* Accepted region */
 }
+
+#define MAX_IMG_SIZE (1024*1024)
+
 int main(int argc, char *argv[])
 {
-	struct stat stbf;
+//	struct stat stbf;
 	unsigned char *zInpbuf = NULL;
 	unsigned long long s = get_time(), e;
 	/* Input image (pass a path or use the test image shipped with the samples ZIP archive) */
-	const char *zInput = argc > 1 ? argv[1] : "./plate.jpg";
-	/* Processed output image path */
-	const char *zOut = argc > 2 ? argv[2] : "./out_plate.jpg";
-	int r = stat(zInput, &stbf);
-	if (r < 0) {
-		perror("stat");
+//	const char *zInput = argc > 1 ? argv[1] : "./plate.jpg";
+//	/* Processed output image path */
+//	const char *zOut = argc > 2 ? argv[2] : "./out_plate.jpg";
+//	int r = stat(zInput, &stbf);
+//	if (r < 0) {
+//		perror("stat");
+//		return -1;
+//	}
+//	zInpbuf = malloc(stbf.st_size);
+//	//memset(zInpbuf, 0, stbf.st_size);
+//	int zIfd = open(zInput, O_RDONLY);
+//	if (zIfd < 0) {
+//		perror("open");
+//		return -1;
+//	}
+//	r = read(zIfd, zInpbuf, stbf.st_size);
+//	if (r < stbf.st_size) {
+//		perror("read");
+//		return -1;
+//	}
+//	close(zIfd);
+	zInpbuf = malloc(MAX_IMG_SIZE);
+	if (!zInpbuf) return -1;
+
+	size_t zImgSz = read(0, zInpbuf, MAX_IMG_SIZE);
+	if (zImgSz <= 0) {
+		if (zImgSz < 0) perror("read");
+		free(zInpbuf);
 		return -1;
 	}
-	zInpbuf = malloc(stbf.st_size);
-	//memset(zInpbuf, 0, stbf.st_size);
-	int zIfd = open(zInput, O_RDONLY);
-	if (zIfd < 0) {
-		perror("open");
-		return -1;
-	}
-	r = read(zIfd, zInpbuf, stbf.st_size);
-	if (r < stbf.st_size) {
-		perror("read");
-		return -1;
-	}
-	close(zIfd);
 
 	/* Load the input image in the grayscale colorspace */
 	//sod_img imgIn = sod_img_load_grayscale(zInput);
-	sod_img imgIn = sod_img_load_from_mem(zInpbuf, stbf.st_size, SOD_IMG_GRAYSCALE);
+	sod_img imgIn = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_GRAYSCALE);
 	if (imgIn.data == 0) {
 		/* Invalid path, unsupported format, memory failure, etc. */
 		puts("Cannot load input image..exiting");
@@ -89,7 +101,7 @@ int main(int argc, char *argv[])
 	 * marking the plate in question if any.
 	 */
 	//sod_img imgCopy = sod_img_load_color(zInput);
-	sod_img imgCopy = sod_img_load_from_mem(zInpbuf, stbf.st_size, SOD_IMG_COLOR);
+	sod_img imgCopy = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_COLOR);
 	/* Obtain a binary image first */
 	sod_img binImg = sod_threshold_image(imgIn, 0.5);
 	/* 
@@ -115,13 +127,14 @@ int main(int argc, char *argv[])
 	}
 	sod_image_blob_boxes_release(box);
 	/* Finally save the output image to the specified path */
-	sod_img_save_as_jpeg(imgCopy, zOut, 0);
+	sod_img_save_as_jpeg(imgCopy, NULL, 0);
 	/* Cleanup */
 	sod_free_image(imgIn);
 	sod_free_image(cannyImg);
 	sod_free_image(binImg);
 	sod_free_image(dilImg);
 	sod_free_image(imgCopy);
+	free(zInpbuf);
 	e = get_time();
 	print_time(s, e);
 	return 0;
