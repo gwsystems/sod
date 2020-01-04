@@ -66,8 +66,9 @@ samples.wasm: $(SAMPLESWOUT)
 
 %.$(WEXT):
 	$(WASMCC) $(WCFLAGS) $(WASMCFLAGS) $(OPTFLAGS) sod.c samples/$(@:%.$(WEXT)=%.c) $(DUMMY) -o bin/$(@:%.$(WEXT)=%.wasm)
-	$(SFCC) bin/$(@:%.$(WEXT)=%.wasm) -o bin/$(@:%.$(WEXT)=%.bc)
-	$(CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -D$(USE_MEM) bin/$(@:%.$(WEXT)=%.bc) $(RT_LIBC) $(RT_RT) ${MEMC} -o bin/$@
+#	$(SFCC) bin/$(@:%.$(WEXT)=%.wasm) -o bin/$(@:%.$(WEXT)=%.bc)
+#	$(CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -D$(USE_MEM) bin/$(@:%.$(WEXT)=%.bc) $(RT_LIBC) $(RT_RT) ${MEMC} -o bin/$@
+	$(SFCC) --inline-constant-globals --runtime-globals bin/$(@:%.$(WEXT)=%.wasm) -o bin/$(@:%.$(WEXT)=%.bc)
 	$(CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -D$(USE_MEM) -I${ART_INC} bin/$(@:%.$(WEXT)=%.bc) $(WASMISA) ${AMEMC} -o bin/$(@:%.$(WEXT)=%.awsm)
 
 clean:
