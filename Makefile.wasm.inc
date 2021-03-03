@@ -1,5 +1,5 @@
-BASE=awsm
-SFCC=silverfish
+BASE=sledge
+SFCC=awsm
 CC=clang
 WASMCC=wasm32-unknown-unknown-wasm-clang
 
