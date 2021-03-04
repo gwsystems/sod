@@ -15,7 +15,7 @@ MEMC_MPX=mpx.c
 MEMC_SEG=segmented.c
 
 # for silverfish
-RT_DIR=${BASE_DIR}/runtime/
+RT_DIR=${BASE_DIR}/awsm/runtime/
 RT_MEM=${RT_DIR}/memory/
 RT_LIBC=${RT_DIR}/libc/libc_backing.c
 RT_RT=${RT_DIR}/runtime.c
