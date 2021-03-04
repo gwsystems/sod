@@ -1,4 +1,4 @@
-BASE_DIR=../
+BASE_DIR=/sledge
 include Makefile.wasm.inc
 
 # SOD does not generally require a Makefile to build. Just drop sod.c and its accompanying
