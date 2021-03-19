@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 	 * Dilate the image say 12 times but you should experiment
 	 * with different values for best results which depend
 	 * on the quality of the input image/frame. */
-	sod_img dilImg = sod_dilate_image(cannyImg, 12);
+	sod_img dilImg = sod_dilate_image(cannyImg, 13);
 	/* Perform connected component labeling or blob detection
 	 * now on the binary, canny edged, Gaussian noise reduced and
 	 * finally dilated image using our filter callback that should
@@ -122,12 +122,21 @@ int main(int argc, char *argv[])
 	int i, nbox;
 	sod_image_find_blobs(dilImg, &box, &nbox, filter_cb);
 	/* Draw a box on each potential plate coordinates */
-	for (i = 0; i < nbox; i++) {
-		sod_image_draw_bbox_width(imgCopy, box[i], 5, 255., 0, 225.); // rose box
+
+	if (nbox > 0) {
+		// printf("x, y, w, h\n");
+		for (i = 0; i < nbox; i++) {
+			// print boxes to stdout
+			printf("%d, %d, %d, %d\n", box[i].x, box[i].y, box[i].w, box[i].h);
+		}
+
+	} else {
+		printf("0 boxes\n", nbox);
 	}
+
 	sod_image_blob_boxes_release(box);
 	/* Finally save the output image to the specified path */
-	sod_img_save_as_jpeg(imgCopy, NULL, 0);
+	// sod_img_save_as_jpeg(imgCopy, NULL, 0);
 	/* Cleanup */
 	sod_free_image(imgIn);
 	sod_free_image(cannyImg);
@@ -136,6 +145,7 @@ int main(int argc, char *argv[])
 	sod_free_image(imgCopy);
 	free(zInpbuf);
 	e = get_time();
-	print_time(s, e);
+	// print_time(s, e);
+	fflush(stdout);
 	return 0;
 }
