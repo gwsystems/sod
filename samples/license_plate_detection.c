@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 		}
 
 	} else {
-		printf("0 boxes\n", nbox);
+		printf("0 boxes\n");
 	}
 
 	sod_image_blob_boxes_release(box);
