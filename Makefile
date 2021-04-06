@@ -1,17 +1,36 @@
-BASE_DIR=/sledge
-include Makefile.wasm.inc
+BASE_DIR=../../../
 
-# SOD does not generally require a Makefile to build. Just drop sod.c and its accompanying
-# header files on your source tree and you are done.
-NCC = clang
-NCFLAGS = -I. -DCPU_FREQ=3600 -O3 -lm -DSOD_DISABLE_CNN -DLIBCOX_DISABLE_DISK_IO
-WCFLAGS = -DWASM -I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO
+AWSM_CC=awsm
 
-#sod: sod.c
-#	$(CC) sod.c samples/cnn_face_detection.c -o sod_face_detect -I. $(CFLAGS)
+NATIVE_CC=clang
+NATIVE_CFLAGS = -I. -DCPU_FREQ=3600 -O3 -lm -DSOD_DISABLE_CNN -DLIBCOX_DISABLE_DISK_IO
 
-EXT = out
-WEXT = wout
+OPTFLAGS=-O3 -flto
+
+WASM_CC=wasm32-unknown-unknown-wasm-clang
+WASM_LDFLAGS=-Wl,-z,stack-size=524288,--allow-undefined,--no-threads,--stack-first,--no-entry,--export-all,--export=main,--export=dummy
+WASM_CFLAGS=${WASM_LDFLAGS} -nostartfiles -DWASM -I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO
+
+MEMC_64=64bit_nix.c
+
+# for aWsm compiler
+# Currently only uses wasmception backing
+AWSM_DIR=${BASE_DIR}/awsm/
+AWSM_RT_DIR=${AWSM_DIR}/runtime/
+AWSM_RT_MEM=${AWSM_RT_DIR}/memory/
+AWSM_RT_LIBC=${AWSM_RT_DIR}/libc/wasmception_backing.c
+AWSM_RT_ENV=${AWSM_RT_DIR}/libc/env.c
+AWSM_RT_RT=${AWSM_RT_DIR}/runtime.c
+AWSM_RT_MEMC=${AWSM_RT_MEM}/${MEMC_64}
+DUMMY=${AWSM_DIR}/code_benches/dummy.c
+
+# for SLEdge serverless runtime
+SLEDGE_RT_DIR=${BASE_DIR}/runtime/
+SLEDGE_RT_INC=${SLEDGE_RT_DIR}/include/
+SLEDGE_MEMC=${SLEDGE_RT_DIR}/compiletime/memory/${MEMC_64}
+
+SLEDGE_BIN_DIR=${SLEDGE_RT_DIR}/bin/
+WASMISA=${SLEDGE_RT_DIR}/compiletime/instr.c
 
 SAMPLES = resize_image \
 	  license_plate_detection
@@ -40,15 +59,7 @@ SAMPLES = resize_image \
 #		rotate_image \
 #		sobel_operator_img
 
-SAMPLESOUT = $(SAMPLES:%=%.$(EXT))
-SAMPLESWOUT = $(SAMPLES:%=%.$(WEXT))
-
 all: clean dir copy
-
-native: samples
-wasm: samples.wasm
-#	samples.wasm
-#      	samples
 
 dir:
 	mkdir -p bin/
@@ -57,19 +68,30 @@ copy:
 	cp samples/*.png bin/
 	cp samples/*.jpg bin/
 
-samples: $(SAMPLESOUT)
+.PHONY: samples.wasm
+samples.wasm: resize_image.wasm license_plate_detection.wasm
 
-samples.wasm: $(SAMPLESWOUT)
+.PHONY: samples.so
+samples.so: resize_image.so license_plate_detection.so
 
-%.$(EXT):
-	$(NCC) $(NCFLAGS) sod.c samples/$(@:%.$(EXT)=%.c) -o bin/$@
+.PHONY: samples.out
+samples.out: resize_image.out license_plate_detection.out
 
-%.$(WEXT):
-	$(WASMCC) $(WCFLAGS) $(WASMCFLAGS) $(OPTFLAGS) sod.c samples/$(@:%.$(WEXT)=%.c) $(DUMMY) -o bin/$(@:%.$(WEXT)=%.wasm)
-#	$(SFCC) bin/$(@:%.$(WEXT)=%.wasm) -o bin/$(@:%.$(WEXT)=%.bc)
-#	$(CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -D$(USE_MEM) bin/$(@:%.$(WEXT)=%.bc) $(RT_LIBC) $(RT_RT) ${MEMC} -o bin/$@
-	$(SFCC) --inline-constant-globals --runtime-globals bin/$(@:%.$(WEXT)=%.wasm) -o bin/$(@:%.$(WEXT)=%.bc)
-	$(CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -D$(USE_MEM) -I${ART_INC} bin/$(@:%.$(WEXT)=%.bc) $(WASMISA) ${AMEMC} -o bin/$(@:%.$(WEXT)=%.awsm)
+%.wasm: samples/%.c
+	$(WASM_CC) $(WASM_CFLAGS) $(OPTFLAGS) sod.c $< $(DUMMY) -o bin/$@
 
+%.out: %.wasm
+	$(AWSM_CC) $< -o $(<:.wasm=.bc)
+	$(NATIVE_CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM bin/$(<:.wasm=.bc) $(AWSM_RT_LIBC) $(AWSM_RT_RT) $(AWSM_RT_ENV) $(AWSM_RT_MEMC) -o $@
+
+%.so: %.wasm
+	$(AWSM_CC) --inline-constant-globals --runtime-globals bin/$< -o bin/$(@:.so=.bc)
+	$(NATIVE_CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM -I${SLEDGE_RT_INC} bin/$(@:.so=.bc) $(WASMISA) ${SLEDGE_MEMC} -o bin/$@
+
+.PHONY: clean
 clean:
 	rm -f bin/*
+	rm -f *.wasm
+	rm -f *.bc
+	rm -f *.so
+	rm -f *.out
