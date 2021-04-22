@@ -59,10 +59,10 @@ SAMPLES = resize_image \
 #		rotate_image \
 #		sobel_operator_img
 
-all: clean dir copy
+all: dir copy
 
 dir:
-	mkdir -p bin/
+	@mkdir -p bin/
 
 copy:
 	cp samples/*.png bin/
@@ -78,15 +78,15 @@ samples.so: resize_image.so license_plate_detection.so
 samples.out: resize_image.out license_plate_detection.out
 
 %.wasm: samples/%.c
-	$(WASM_CC) $(WASM_CFLAGS) $(OPTFLAGS) sod.c $< $(DUMMY) -o bin/$@
+	@$(WASM_CC) $(WASM_CFLAGS) $(OPTFLAGS) sod.c $< $(DUMMY) -o bin/$@
 
 %.out: %.wasm
-	$(AWSM_CC) $< -o $(<:.wasm=.bc)
-	$(NATIVE_CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM bin/$(<:.wasm=.bc) $(AWSM_RT_LIBC) $(AWSM_RT_RT) $(AWSM_RT_ENV) $(AWSM_RT_MEMC) -o $@
+	@$(AWSM_CC) $< -o $(<:.wasm=.bc)
+	@$(NATIVE_CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM bin/$(<:.wasm=.bc) $(AWSM_RT_LIBC) $(AWSM_RT_RT) $(AWSM_RT_ENV) $(AWSM_RT_MEMC) -o $@
 
 %.so: %.wasm
-	$(AWSM_CC) --inline-constant-globals --runtime-globals bin/$< -o bin/$(@:.so=.bc)
-	$(NATIVE_CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM -I${SLEDGE_RT_INC} bin/$(@:.so=.bc) $(WASMISA) ${SLEDGE_MEMC} -o bin/$@
+	@$(AWSM_CC) --inline-constant-globals --runtime-globals bin/$< -o bin/$(@:.so=.bc)
+	@$(NATIVE_CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM -I${SLEDGE_RT_INC} bin/$(@:.so=.bc) $(WASMISA) ${SLEDGE_MEMC} -o bin/$@
 
 .PHONY: clean
 clean:
