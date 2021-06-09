@@ -68,6 +68,9 @@ copy:
 	cp samples/*.png bin/
 	cp samples/*.jpg bin/
 
+.PHONY: samples
+samples:  resize_image #license_plate_detection
+
 .PHONY: samples.wasm
 samples.wasm: resize_image.wasm license_plate_detection.wasm
 
@@ -76,6 +79,9 @@ samples.so: resize_image.so license_plate_detection.so
 
 .PHONY: samples.out
 samples.out: resize_image.out license_plate_detection.out
+
+%: samples/%.c
+	$(NATIVE_CC) $(NATIVE_CFLAGS) sod.c samples/$(@:%=%.c) -o bin/$@
 
 %.wasm: samples/%.c
 	@$(WASM_CC) $(WASM_CFLAGS) $(OPTFLAGS) sod.c $< $(DUMMY) -o bin/$@
