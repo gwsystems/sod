@@ -68,6 +68,9 @@ copy:
 	cp samples/*.png bin/
 	cp samples/*.jpg bin/
 
+.PHONY: samples
+samples:  resize_image license_plate_detection
+
 .PHONY: samples.wasm
 samples.wasm: resize_image.wasm license_plate_detection.wasm
 
@@ -76,6 +79,9 @@ samples.so: resize_image.so license_plate_detection.so
 
 .PHONY: samples.out
 samples.out: resize_image.out license_plate_detection.out
+
+%: samples/%.c
+	$(NATIVE_CC) $(NATIVE_CFLAGS) sod.c samples/$(@:%=%.c) -o bin/$@
 
 %.wasm: samples/%.c
 	@$(WASM_CC) $(WASM_CFLAGS) $(OPTFLAGS) sod.c $< $(DUMMY) -o bin/$@
@@ -87,6 +93,7 @@ samples.out: resize_image.out license_plate_detection.out
 %.so: %.wasm
 	@$(AWSM_CC) --inline-constant-globals --runtime-globals bin/$< -o bin/$(@:.so=.bc)
 	@$(NATIVE_CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM -I${SLEDGE_RT_INC} bin/$(@:.so=.bc) $(WASMISA) ${SLEDGE_MEMC} -o bin/$@
+#	@cp ./bin/license_plate_detection.so ${SLEDGE_BIN_DIR}/lpd_wasm.so
 
 .PHONY: clean
 clean:

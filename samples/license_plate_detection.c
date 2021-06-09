@@ -54,31 +54,9 @@ static int filter_cb(int width, int height)
 
 int main(int argc, char *argv[])
 {
-//	struct stat stbf;
 	unsigned char *zInpbuf = NULL;
-	unsigned long long s = get_time(), e;
-	/* Input image (pass a path or use the test image shipped with the samples ZIP archive) */
-//	const char *zInput = argc > 1 ? argv[1] : "./plate.jpg";
-//	/* Processed output image path */
-//	const char *zOut = argc > 2 ? argv[2] : "./out_plate.jpg";
-//	int r = stat(zInput, &stbf);
-//	if (r < 0) {
-//		perror("stat");
-//		return -1;
-//	}
-//	zInpbuf = malloc(stbf.st_size);
-//	//memset(zInpbuf, 0, stbf.st_size);
-//	int zIfd = open(zInput, O_RDONLY);
-//	if (zIfd < 0) {
-//		perror("open");
-//		return -1;
-//	}
-//	r = read(zIfd, zInpbuf, stbf.st_size);
-//	if (r < stbf.st_size) {
-//		perror("read");
-//		return -1;
-//	}
-//	close(zIfd);
+	// unsigned long long s = get_time(), e;
+
 	zInpbuf = malloc(MAX_IMG_SIZE);
 	if (!zInpbuf) return -1;
 
@@ -90,7 +68,6 @@ int main(int argc, char *argv[])
 	}
 
 	/* Load the input image in the grayscale colorspace */
-	//sod_img imgIn = sod_img_load_grayscale(zInput);
 	sod_img imgIn = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_GRAYSCALE);
 	if (imgIn.data == 0) {
 		/* Invalid path, unsupported format, memory failure, etc. */
@@ -100,8 +77,8 @@ int main(int argc, char *argv[])
 	/* A full color copy of the input image so we can draw rose boxes
 	 * marking the plate in question if any.
 	 */
-	//sod_img imgCopy = sod_img_load_color(zInput);
-	sod_img imgCopy = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_COLOR);
+
+	// sod_img imgCopy = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_COLOR);
 	/* Obtain a binary image first */
 	sod_img binImg = sod_threshold_image(imgIn, 0.5);
 	/* 
@@ -112,7 +89,7 @@ int main(int argc, char *argv[])
 	 * Dilate the image say 12 times but you should experiment
 	 * with different values for best results which depend
 	 * on the quality of the input image/frame. */
-	sod_img dilImg = sod_dilate_image(cannyImg, 13);
+	sod_img dilImg = sod_dilate_image(cannyImg, 12);
 	/* Perform connected component labeling or blob detection
 	 * now on the binary, canny edged, Gaussian noise reduced and
 	 * finally dilated image using our filter callback that should
@@ -121,10 +98,9 @@ int main(int argc, char *argv[])
 	sod_box *box = 0;
 	int i, nbox;
 	sod_image_find_blobs(dilImg, &box, &nbox, filter_cb);
+	
 	/* Draw a box on each potential plate coordinates */
-
 	if (nbox > 0) {
-		// printf("x, y, w, h\n");
 		for (i = 0; i < nbox; i++) {
 			// print boxes to stdout
 			printf("%d, %d, %d, %d\n", box[i].x, box[i].y, box[i].w, box[i].h);
@@ -142,10 +118,10 @@ int main(int argc, char *argv[])
 	sod_free_image(cannyImg);
 	sod_free_image(binImg);
 	sod_free_image(dilImg);
-	sod_free_image(imgCopy);
+	// sod_free_image(imgCopy);
 	free(zInpbuf);
-	e = get_time();
+	// e = get_time();
 	// print_time(s, e);
-	fflush(stdout);
+	// fflush(stdout);
 	return 0;
 }
