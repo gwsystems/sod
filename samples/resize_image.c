@@ -40,41 +40,17 @@ int main(int argc, char *argv[])
 //	struct stat stbf;
 	size_t imgSz = 0;
 	unsigned char *zInpbuf = NULL;
-	unsigned long long s = get_time(), e;
-//	/* Input image (pass a path or use the test image shipped with the samples ZIP archive) */
-//	const char *zInput = argc > 1 ? argv[1] : "./flower.jpg";
-//	/* Processed output image path */
-//	const char *zOut = argc > 2 ? argv[2] : "./out_rz.png";
-//	/* Load the input image in full color */
-//	int r = stat(zInput, &stbf);
-//	if (r < 0) {
-//		perror("stat");
-//		return -1;
-//	}
-//	zInpbuf = malloc(stbf.st_size);
-//	//memset(zInpbuf, 0, stbf.st_size);
-//	int zIfd = open(zInput, O_RDONLY);
-//	if (zIfd < 0) {
-//		perror("open");
-//		return -1;
-//	}
-//	r = read(zIfd, zInpbuf, stbf.st_size);
-//	if (r < stbf.st_size) {
-//		perror("read");
-//		return -1;
-//	}
-//	close(zIfd);
+	// unsigned long long s = get_time(), e;
+
 	zInpbuf = malloc(MAX_IMG_SZ);
 	if (!zInpbuf) return -1;
 
 	imgSz = read(0, zInpbuf, MAX_IMG_SZ);
 	if (imgSz <= 0) return -1;
 	
-//	sod_img imgIn = sod_img_load_from_file(zInput, SOD_IMG_COLOR /* full color channels */);
 	sod_img imgIn = sod_img_load_from_mem(zInpbuf, imgSz, SOD_IMG_COLOR /* full color channels */);
 	if (imgIn.data == 0) {
 		/* Invalid path, unsupported format, memory failure, etc. */
-		//puts("Cannot load input image..exiting");
 		printf("Error loading input\n");
 		free(zInpbuf);
 		return -1;
@@ -85,13 +61,13 @@ int main(int argc, char *argv[])
 	
 	sod_img rz = sod_resize_image(imgIn, newWidth, newHeight);
 	/* Save the resized image to the specified path */
-	sod_img_save_as_png(rz, NULL);
-	//sod_img_save_as_jpeg(rz, zOut, 0);
+	// sod_img_save_as_png(rz, NULL);
+	sod_img_save_as_jpeg(rz, NULL, 0);
 	/* Cleanup */
 	sod_free_image(imgIn);
 	sod_free_image(rz);
 	free(zInpbuf);
-	e = get_time();
-	print_time(s, e);
+	// e = get_time();
+	// print_time(s, e);
 	return 0;
 }

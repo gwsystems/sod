@@ -35,30 +35,6 @@ WASMISA=${SLEDGE_RT_DIR}/compiletime/instr.c
 SAMPLES = resize_image \
 	  license_plate_detection
 
-#SAMPLES = batch_img_loading \
-#		blob_detection \
-#		canny_edge_detection \
-#		cnn_coco \
-#		cnn_face_detection \
-#		cnn_object_detection \
-#		cnn_voc \
-#		crop_image \
-#		dilate_image \
-#		erode_image \
-#		grayscale_image \
-#		hilditch_thin \
-#		hough_lines_detection \
-#		license_plate_detection \
-#		minutiae \
-#		otsu_image \
-#		realnet_face_detection \
-#		realnet_face_detection_embedded \
-#		realnet_train_model \
-#		resize_image \
-#		rnn_text_gen \
-#		rotate_image \
-#		sobel_operator_img
-
 all: dir copy
 
 dir:
@@ -69,7 +45,7 @@ copy:
 	cp samples/*.jpg bin/
 
 .PHONY: samples
-samples:  resize_image #license_plate_detection
+samples:  resize_image license_plate_detection
 
 .PHONY: samples.wasm
 samples.wasm: resize_image.wasm license_plate_detection.wasm
