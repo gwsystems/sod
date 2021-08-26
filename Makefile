@@ -9,7 +9,7 @@ OPTFLAGS=-O3 -flto
 
 WASM_CC=${BASE_DIR}/awsm/wasi-sdk/bin/clang
 WASM_LDFLAGS=-Wl,-z,stack-size=524288,--allow-undefined,--threads=1,--export-all
-WASM_CFLAGS=${WASM_LDFLAGS} -nostartfiles -DWASM -I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO
+WASM_CFLAGS=${WASM_LDFLAGS} -DWASM -I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO -D_WASI_EMULATED_MMAN -lwasi-emulated-mman
 
 MEMC_64=64bit_nix.c
 
