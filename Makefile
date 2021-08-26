@@ -1,14 +1,14 @@
 BASE_DIR=../../../
 
-AWSM_CC=awsm
+AWSM_CC=${BASE_DIR}/awsm/target/release/awsm
 
 NATIVE_CC=clang
 NATIVE_CFLAGS = -I. -DCPU_FREQ=3600 -O3 -lm -DSOD_DISABLE_CNN -DLIBCOX_DISABLE_DISK_IO
 
 OPTFLAGS=-O3 -flto
 
-WASM_CC=wasm32-unknown-unknown-wasm-clang
-WASM_LDFLAGS=-Wl,-z,stack-size=524288,--allow-undefined,--no-threads,--stack-first,--no-entry,--export-all,--export=main,--export=dummy
+WASM_CC=${BASE_DIR}/awsm/wasi-sdk/bin/clang
+WASM_LDFLAGS=-Wl,-z,stack-size=524288,--allow-undefined,--threads=1,--export-all
 WASM_CFLAGS=${WASM_LDFLAGS} -nostartfiles -DWASM -I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO
 
 MEMC_64=64bit_nix.c
@@ -64,11 +64,11 @@ samples.out: resize_image.out license_plate_detection.out
 
 %.out: %.wasm
 	@$(AWSM_CC) $< -o $(<:.wasm=.bc)
-	@$(NATIVE_CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM bin/$(<:.wasm=.bc) $(AWSM_RT_LIBC) $(AWSM_RT_RT) $(AWSM_RT_ENV) $(AWSM_RT_MEMC) -o $@
+	@$(NATIVE_CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) bin/$(<:.wasm=.bc) $(AWSM_RT_LIBC) $(AWSM_RT_RT) $(AWSM_RT_ENV) $(AWSM_RT_MEMC) -o $@
 
 %.so: %.wasm
 	@$(AWSM_CC) --inline-constant-globals --runtime-globals bin/$< -o bin/$(@:.so=.bc)
-	@$(NATIVE_CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -DUSE_MEM_VM -I${SLEDGE_RT_INC} bin/$(@:.so=.bc) $(WASMISA) ${SLEDGE_MEMC} -o bin/$@
+	@$(NATIVE_CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -I${SLEDGE_RT_INC} bin/$(@:.so=.bc) $(WASMISA) ${SLEDGE_MEMC} -o bin/$@
 
 .PHONY: clean
 clean:
