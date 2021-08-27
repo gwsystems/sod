@@ -1,79 +1,46 @@
-BASE_DIR=../../../
-
-AWSM_CC=${BASE_DIR}/awsm/target/release/awsm
-
-NATIVE_CC=clang
-NATIVE_CFLAGS = -I. -DCPU_FREQ=3600 -O3 -lm -DSOD_DISABLE_CNN -DLIBCOX_DISABLE_DISK_IO
-
+WASMCC = /opt/wasi-sdk/bin/clang
+CC=clang
 OPTFLAGS=-O3 -flto
 
-WASM_CC=${BASE_DIR}/awsm/wasi-sdk/bin/clang
-WASM_LDFLAGS=-Wl,-z,stack-size=524288,--allow-undefined,--threads=1,--export-all
-WASM_CFLAGS=${WASM_LDFLAGS} -DWASM -I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO -D_WASI_EMULATED_MMAN -lwasi-emulated-mman
+WASMLINKFLAGS=-Wl,-z,stack-size=524288,--allow-undefined,--threads=1
+WASMCFLAGS=${WASMLINKFLAGS} -D_WASI_EMULATED_MMAN -lwasi-emulated-mman -DWASM
+CFLAGS=-I. -DSOD_DISABLE_CNN -lm -DLIBCOX_DISABLE_DISK_IO 
 
-MEMC_64=64bit_nix.c
-
-# for aWsm compiler
-# Currently only uses wasmception backing
-AWSM_DIR=${BASE_DIR}/awsm/
-AWSM_RT_DIR=${AWSM_DIR}/runtime/
-AWSM_RT_MEM=${AWSM_RT_DIR}/memory/
-AWSM_RT_LIBC=${AWSM_RT_DIR}/libc/wasmception_backing.c
-AWSM_RT_ENV=${AWSM_RT_DIR}/libc/env.c
-AWSM_RT_RT=${AWSM_RT_DIR}/runtime.c
-AWSM_RT_MEMC=${AWSM_RT_MEM}/${MEMC_64}
-DUMMY=${AWSM_DIR}/code_benches/dummy.c
-
-# for SLEdge serverless runtime
-SLEDGE_RT_DIR=${BASE_DIR}/runtime/
-SLEDGE_RT_INC=${SLEDGE_RT_DIR}/include/
-SLEDGE_MEMC=${SLEDGE_RT_DIR}/compiletime/memory/${MEMC_64}
-
-SLEDGE_BIN_DIR=${SLEDGE_RT_DIR}/bin/
-WASMISA=${SLEDGE_RT_DIR}/compiletime/instr.c
-
-SAMPLES = resize_image \
-	  license_plate_detection
-
-all: dir copy
-
-dir:
-	@mkdir -p bin/
-
-copy:
-	cp samples/*.png bin/
-	cp samples/*.jpg bin/
+SAMPLES = resize_image license_plate_detection
 
 .PHONY: samples
-samples:  resize_image license_plate_detection
+samples: ${SAMPLES}
 
 .PHONY: samples.wasm
-samples.wasm: resize_image.wasm license_plate_detection.wasm
+samples.wasm: ${SAMPLES:=.wasm}
 
-.PHONY: samples.so
-samples.so: resize_image.so license_plate_detection.so
-
-.PHONY: samples.out
-samples.out: resize_image.out license_plate_detection.out
-
+# It is unclear if CPU_FREQ was intentionally left off the wasm build or not
 %: samples/%.c
-	$(NATIVE_CC) $(NATIVE_CFLAGS) sod.c samples/$(@:%=%.c) -o bin/$@
+	@${CC} -DCPU_FREQ=3600 ${CFLAGS} ${OPTFLAGS} sod.c $^ -o $@
 
 %.wasm: samples/%.c
-	@$(WASM_CC) $(WASM_CFLAGS) $(OPTFLAGS) sod.c $< $(DUMMY) -o bin/$@
+	@${WASMCC} ${WASMLINKFLAGS} ${CFLAGS} ${OPTFLAGS} ${WASMCFLAGS} sod.c $^ -o $@
 
-%.out: %.wasm
-	@$(AWSM_CC) $< -o $(<:.wasm=.bc)
-	@$(NATIVE_CC) ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) bin/$(<:.wasm=.bc) $(AWSM_RT_LIBC) $(AWSM_RT_RT) $(AWSM_RT_ENV) $(AWSM_RT_MEMC) -o $@
+# Writes the resized image to temp.jpg
+.PHONY: resize_image.run
+resize_image.run: resize_image.wasm
+	wasmtime resize_image.wasm <samples/plate.jpg > temp.jpg
 
-%.so: %.wasm
-	@$(AWSM_CC) --inline-constant-globals --runtime-globals bin/$< -o bin/$(@:.so=.bc)
-	@$(NATIVE_CC) --shared -fPIC ${CFLAGS} ${EXTRA_CFLAGS} $(OPTFLAGS) -I${SLEDGE_RT_INC} bin/$(@:.so=.bc) $(WASMISA) ${SLEDGE_MEMC} -o bin/$@
+.PHONY: resize_image.run_native
+resize_image.run_native: resize_image
+	./resize_image <samples/plate.jpg > temp.jpg
+
+# Returns the coordinates of a bounding box where the license plate is located
+.PHONY: license_plate_detection.run
+license_plate_detection.run: license_plate_detection.wasm
+	@wasmtime license_plate_detection.wasm <samples/plate.jpg
+
+.PHONY: license_plate_detection.run_native
+license_plate_detection.run_native: license_plate_detection
+	@./license_plate_detection <samples/plate.jpg
 
 .PHONY: clean
 clean:
-	rm -f bin/*
-	rm -f *.wasm
-	rm -f *.bc
-	rm -f *.so
-	rm -f *.out
+	rm -f *.wasm 
+	rm -f temp.jpg
+	rm -f ${SAMPLES}
