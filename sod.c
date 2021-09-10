@@ -2015,7 +2015,7 @@ static float rand_uniform(float min, float max)
 		min = max;
 		max = swap;
 	}
-	return ((float)rand() / RAND_MAX * (max - min)) + min;
+	return ((float)rand() / (float)RAND_MAX * (max - min)) + min;
 }
 static int constrain_int(int a, int min, int max)
 {
