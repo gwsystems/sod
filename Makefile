@@ -1,4 +1,4 @@
-WASMCC = /opt/wasi-sdk/bin/clang
+WASMCC=${WASI_SDK_PATH}/bin/clang --sysroot=${WASI_SDK_PATH}/share/wasi-sysroot/
 CC=clang
 OPTFLAGS=-O3 -flto
 
