@@ -1,6 +1,4 @@
 bin/
-resize_image
-resize_image.wasm
-license_plate_detection
-license_plate_detection.wasm
 temp.jpg
+*.out
+*.wasm
