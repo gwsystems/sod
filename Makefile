@@ -38,6 +38,9 @@ samples.wasm: ${SAMPLES:=.wasm}
 %.wasm: sod.c samples/%.c
 	@${WASMCC} ${WASMCFLAGS} ${WASMLDFLAGS} $^ -o $@
 
+%.wat: %.wasm
+	wasm2wat $< -o $@
+
 # Writes the resized image to temp.jpg
 .PHONY: resize_image.run
 resize_image.run: resize_image.wasm
