@@ -45,13 +45,17 @@ samples.wasm: ${SAMPLES:=.wasm}
 	wasmtime compile $< -o $@
 
 # Writes the resized image to temp.jpg
-.PHONY: resize_image.run_jit
-resize_image.run_jit: resize_image.wasm
+.PHONY: resize_image.run_wasmtime_jit
+resize_image.run_wasmtime_jit: resize_image.wasm
 	wasmtime resize_image.wasm <samples/plate.jpg
 
-.PHONY: resize_image.run_aot
-resize_image.run_aot: resize_image.cwasm
+.PHONY: resize_image.run_wasmtime_aot
+resize_image.run_wasmtime_aot: resize_image.cwasm
 	wasmtime run --allow-precompiled resize_image.cwasm <samples/plate.jpg
+
+.PHONY: resize_image.run_wasm3
+resize_image.run_wasm3: resize_image.wasm
+	wasm3 resize_image.wasm <samples/plate.jpg
 
 .PHONY: resize_image.run_native
 resize_image.run_native: resize_image.out
@@ -59,12 +63,16 @@ resize_image.run_native: resize_image.out
 
 # Returns the coordinates of a bounding box where the license plate is located
 .PHONY: license_plate_detection.run
-license_plate_detection.run_jit: license_plate_detection.wasm
+license_plate_detection.run_wasmtime_jit: license_plate_detection.wasm
 	@wasmtime license_plate_detection.wasm <samples/plate.jpg
 
-.PHONY: license_plate_detection.run_aot
-license_plate_detection.run_aot: license_plate_detection.cwasm
+.PHONY: license_plate_detection.run_wasmtime_aot
+license_plate_detection.run_wasmtime_aot: license_plate_detection.cwasm
 	@wasmtime run --allow-precompiled license_plate_detection.cwasm <samples/plate.jpg
+
+.PHONY: license_plate_detection.run_wasm3
+license_plate_detection.run_wasm3: license_plate_detection.wasm
+	wasm3 license_plate_detection.wasm <samples/plate.jpg
 
 .PHONY: license_plate_detection.run_native
 license_plate_detection.run_native: license_plate_detection.out
@@ -83,7 +91,9 @@ bench.csv: license_plate_detection.wasm license_plate_detection.cwasm license_pl
 	-n license_plate_detection_native './license_plate_detection.out <samples/plate.jpg' \
 	-n license_plate_detection_wasmtime_jit 'wasmtime run license_plate_detection.wasm <samples/plate.jpg' \
 	-n license_plate_detection_wasmtime_aot 'wasmtime run --allow-precompiled license_plate_detection.cwasm <samples/plate.jpg' \
+	-n license_plate_detection_wasm3 'wasm3 license_plate_detection_wasm3.wasm <samples/plate.jpg' \
 	-n resize_image_native './resize_image.out <samples/plate.jpg' \
 	-n resize_image_wasmtime_jit 'wasmtime run resize_image.wasm <samples/plate.jpg' \
 	-n resize_image_wasmtime_aot 'wasmtime run --allow-precompiled resize_image.cwasm <samples/plate.jpg' \
+	-n resize_image_wasm3 'wasm3 resize_image_wasm3.wasm <samples/plate.jpg' \
 	--export-csv bench.csv
