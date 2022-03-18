@@ -4,3 +4,4 @@ temp.jpg
 *.wasm
 *.cwasm
 *.csv
+*.aot
