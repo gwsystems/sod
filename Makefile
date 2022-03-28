@@ -52,6 +52,13 @@ WASMLDFLAGS+= -lwasi-emulated-mman
 
 SAMPLES = resize_image license_plate_detection
 
+RESIZE_IMAGE_HYPERFINE_ARGS = -w 10
+RESIZE_IMAGE_PRE =
+RESIZE_IMAGE_POST = <$(abspath ./samples/plate.jpg)
+LICENSE_PLATE_DETECTION_HYPERFINE_ARGS = -w 10
+LICENSE_PLATE_DETECTION_PRE =
+LICENSE_PLATE_DETECTION_POST = <$(abspath ./samples/plate.jpg) 
+
 .PHONY: all
 all: \
 	resize_image.out \
@@ -78,54 +85,54 @@ samples.wasm: ${SAMPLES:=.wasm}
 # Writes the resized image to temp.jpg
 .PHONY: resize_image.run_wasmtime_jit
 resize_image.run_wasmtime_jit: resize_image.wasm
-	wasmtime resize_image.wasm <samples/plate.jpg
+	${RESIZE_IMAGE_PRE} wasmtime resize_image.wasm ${RESIZE_IMAGE_POST}
 
 .PHONY: resize_image.run_wasmtime_aot
 resize_image.run_wasmtime_aot: resize_image.cwasm
-	wasmtime run --allow-precompiled resize_image.cwasm <samples/plate.jpg
+	${RESIZE_IMAGE_PRE} wasmtime run --allow-precompiled resize_image.cwasm ${RESIZE_IMAGE_POST}
 
 .PHONY: resize_image.run_wasm3
 resize_image.run_wasm3: resize_image.wasm
-	wasm3 resize_image.wasm <samples/plate.jpg
+	${RESIZE_IMAGE_PRE} wasm3 resize_image.wasm ${RESIZE_IMAGE_POST}
 
 .PHONY: resize_image.run_wamr_int
 resize_image.run_wamr_int: resize_image.wasm
-	iwasm resize_image.wasm <samples/plate.jpg
+	${RESIZE_IMAGE_PRE} iwasm resize_image.wasm ${RESIZE_IMAGE_POST}
 
 .PHONY: resize_image.run_wamr_aot
 resize_image.run_wamr_aot: resize_image.aot
-	iwasm resize_image.aot <samples/plate.jpg
+	${RESIZE_IMAGE_PRE} iwasm resize_image.aot ${RESIZE_IMAGE_POST}
 
 .PHONY: resize_image.run_native
 resize_image.run_native: resize_image.out
-	./resize_image.out <samples/plate.jpg
+	${RESIZE_IMAGE_PRE} ./resize_image.out ${RESIZE_IMAGE_POST}
 
 # Returns the coordinates of a bounding box where the license plate is located
 .PHONY: license_plate_detection.run
 license_plate_detection.run_wasmtime_jit: license_plate_detection.wasm
-	@wasmtime license_plate_detection.wasm <samples/plate.jpg
+	@${LICENSE_PLATE_DETECTION_PRE} wasmtime license_plate_detection.wasm ${LICENSE_PLATE_DETECTION_POST}
 
 .PHONY: license_plate_detection.run_wasmtime_aot
 license_plate_detection.run_wasmtime_aot: license_plate_detection.cwasm
-	@wasmtime run --allow-precompiled license_plate_detection.cwasm <samples/plate.jpg
+	@${LICENSE_PLATE_DETECTION_PRE} wasmtime run --allow-precompiled license_plate_detection.cwasm ${LICENSE_PLATE_DETECTION_POST}
 
 # Error: [trap] stack overflow
 # .PHONY: license_plate_detection.run_wasm3
 # license_plate_detection.run_wasm3: license_plate_detection.wasm
-# 	wasm3 license_plate_detection.wasm <samples/plate.jpg
+# 	${LICENSE_PLATE_DETECTION_PRE} wasm3 license_plate_detection.wasm ${LICENSE_PLATE_DETECTION_POST}
 
 # Exception: wasm operand stack overflow
 # .PHONY: license_plate_detection.run_wamr_int
 # license_plate_detection.run_wamr_int: license_plate_detection.wasm
-# 	iwasm license_plate_detection.wasm <samples/plate.jpg
+# 	${LICENSE_PLATE_DETECTION_PRE} iwasm license_plate_detection.wasm ${LICENSE_PLATE_DETECTION_POST}
 
 .PHONY: license_plate_detection.run_wamr_aot
 license_plate_detection.run_wamr_aot: license_plate_detection.aot
-	iwasm license_plate_detection.aot <samples/plate.jpg
+	${LICENSE_PLATE_DETECTION_PRE} iwasm license_plate_detection.aot ${LICENSE_PLATE_DETECTION_POST}
 
 .PHONY: license_plate_detection.run_native
 license_plate_detection.run_native: license_plate_detection.out
-	@./license_plate_detection.out <samples/plate.jpg
+	@${LICENSE_PLATE_DETECTION_PRE} ./license_plate_detection.out ${LICENSE_PLATE_DETECTION_POST}
 
 .PHONY: clean
 clean:
@@ -133,20 +140,23 @@ clean:
 	rm -f *.out 
 	rm -f temp.jpg
 	rm -f ${SAMPLES}
-	@rm -f bench.csv
+	rm -f *bench.csv
 
-bench.csv: license_plate_detection.wasm license_plate_detection.cwasm license_plate_detection.out license_plate_detection.aot resize_image.wasm resize_image.cwasm resize_image.out resize_image.aot
-	hyperfine -w 10 --export-csv bench.csv \
-		-n license_plate_detection_native       './license_plate_detection.out <samples/plate.jpg' \
-		-n license_plate_detection_wasmtime_jit 'wasmtime run license_plate_detection.wasm <samples/plate.jpg' \
-		-n license_plate_detection_wasmtime_aot 'wasmtime run --allow-precompiled license_plate_detection.cwasm <samples/plate.jpg' \
-		-n license_plate_detection_wamr_aot     'iwasm license_plate_detection.aot <samples/plate.jpg' \
-		-n resize_image_native                  './resize_image.out <samples/plate.jpg' \
-		-n resize_image_wasmtime_jit            'wasmtime run resize_image.wasm <samples/plate.jpg' \
-		-n resize_image_wasmtime_aot            'wasmtime run --allow-precompiled resize_image.cwasm <samples/plate.jpg' \
-		-n resize_image_wamr_int                'iwasm resize_image.wasm <samples/plate.jpg' \
-		-n resize_image_wamr_aot                'iwasm resize_image.aot <samples/plate.jpg' \
-		-n resize_image_wasm3                   'wasm3 resize_image.wasm <samples/plate.jpg'
+license_plate_detection.bench.csv: license_plate_detection.wasm license_plate_detection.cwasm license_plate_detection.out license_plate_detection.aot 
+	hyperfine ${LINCENSE_PLATE_DETECTION_HYPERFINE_ARGS} --export-csv $@ \
+		-n license_plate_detection_native       '${LICENSE_PLATE_DETECTION_PRE} ./license_plate_detection.out ${LICENSE_PLATE_DETECTION_POST}' \
+		-n license_plate_detection_wasmtime_jit '${LICENSE_PLATE_DETECTION_PRE} wasmtime run license_plate_detection.wasm ${LICENSE_PLATE_DETECTION_POST}' \
+		-n license_plate_detection_wasmtime_aot '${LICENSE_PLATE_DETECTION_PRE} wasmtime run --allow-precompiled license_plate_detection.cwasm ${LICENSE_PLATE_DETECTION_POST}' \
+		-n license_plate_detection_wamr_aot     '${LICENSE_PLATE_DETECTION_PRE} iwasm license_plate_detection.aot ${LICENSE_PLATE_DETECTION_POST}'
+		
+# -n license_plate_detection_wasm3        '${LICENSE_PLATE_DETECTION_PRE} wasm3 license_plate_detection_wasm3.wasm ${LICENSE_PLATE_DETECTION_POST}'
+# -n license_plate_detection_wamr_int     '${LICENSE_PLATE_DETECTION_PRE} iwasm license_plate_detection.wasm ${LICENSE_PLATE_DETECTION_POST}'
 
-# -n license_plate_detection_wasm3        'wasm3 license_plate_detection_wasm3.wasm <samples/plate.jpg' \
-# -n license_plate_detection_wamr_int     'iwasm license_plate_detection.wasm' \
+resize_image.bench.csv: resize_image.wasm resize_image.cwasm resize_image.out resize_image.aot
+	hyperfine ${RESIZE_IMAGE_HYPERFINE_ARGS} --export-csv $@ \
+		-n resize_image_native                  '${RESIZE_IMAGE_PRE} ./resize_image.out ${RESIZE_IMAGE_POST}' \
+		-n resize_image_wasmtime_jit            '${RESIZE_IMAGE_PRE} wasmtime run resize_image.wasm ${RESIZE_IMAGE_POST}' \
+		-n resize_image_wasmtime_aot            '${RESIZE_IMAGE_PRE} wasmtime run --allow-precompiled resize_image.cwasm ${RESIZE_IMAGE_POST}' \
+		-n resize_image_wamr_int                '${RESIZE_IMAGE_PRE} iwasm resize_image.wasm ${RESIZE_IMAGE_POST}' \
+		-n resize_image_wamr_aot                '${RESIZE_IMAGE_PRE} iwasm resize_image.aot ${RESIZE_IMAGE_POST}' \
+		-n resize_image_wasm3                   '${RESIZE_IMAGE_PRE} wasm3 resize_image.wasm ${RESIZE_IMAGE_POST}'
