@@ -63,6 +63,7 @@
 #include <limits.h>
 /* Local includes */
 #include "sod.h"
+#include "model_data.h"
 /* Forward declaration */
 typedef struct SySet SySet;
 typedef struct SyBlob SyBlob;
@@ -4047,6 +4048,8 @@ static int load_weights_upto(network *net, const char *filename, int cutoff)
 	}
 #endif
 	fp = fopen(filename, "rb");
+	/* If the model file is not present, read the hardcoded pre-trained model instead */
+	if (!fp) fp = fmemopen((void*)face_model_data, sizeof(face_model_data), "rb");
 	if (!fp) {
 		net->pNet->nErr++;
 		net->pNet->zErr = "Cannot open SOD model";

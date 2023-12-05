@@ -24,39 +24,28 @@
 *  https://sod.pixlab.io/api.html
 */
 #include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include "sod.h"
-
-#define MAX_IMG_SIZE (1024*1024)
-
 /* Real-Time multi-scale face detection using SOD CNN */
 int main(int argc, char *argv[])
 {
-	unsigned char *zInpbuf = NULL;
-	// unsigned long long s = get_time(), e;
-
-	zInpbuf = malloc(MAX_IMG_SIZE);
-	if (!zInpbuf) return -1;
-
-	size_t zImgSz = read(0, zInpbuf, MAX_IMG_SIZE);
-	if (zImgSz <= 0) {
-		if (zImgSz < 0) perror("read");
-		free(zInpbuf);
-		return -1;
-	}
-
-	/* Load the input image in the grayscale colorspace */
-	sod_img imgIn = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_COLOR);
+	/* Input image (pass a path or use the test image shipped with the samples ZIP archive) */
+	const char *zInput = argc > 1 ? argv[1] : "./cnn_faces.jpg";
+	/* Draw detection boxes (i.e. rectangles) on this output image which
+	 * is a copy of the input plus the boxes.
+	 */
+	const char *zOut = argc > 2 ? argv[2] : "./out.png";
+	/*
+	 * The CNN handle that should perform the detection process */
+	sod_cnn *pNet;
+	/* Load the input image */
+	sod_img imgIn = sod_img_load_from_file(zInput,SOD_IMG_COLOR/* Full colors*/);
 	if (imgIn.data == 0) {
 		/* Invalid path, unsupported format, memory failure, etc. */
 		puts("Cannot load input image..exiting");
 		return 0;
 	}
-
-	/* The CNN handle that should perform the detection process */
-	sod_cnn *pNet;
-
+	/* Make a copy so we can draw anything we want. */
+	sod_img imgOut = sod_copy_image(imgIn);
 	int rc;
 	const char *zErr; /* Error log if any */
 	/*
@@ -94,7 +83,7 @@ int main(int argc, char *argv[])
 		puts("Something went wrong while preparing image..");
 		return 0;
 	}
-
+	puts("Starting CNN face detection");
 	/* Detect.. */
 	sod_cnn_predict(pNet, blob, &box, &nbox);
 	/* Report the detection result. */
@@ -103,11 +92,17 @@ int main(int argc, char *argv[])
 		/* Report the coordinates and score of the current detected face */
 		printf("(%s) X:%d Y:%d Width:%d Height:%d score:%f%%\n", box[i].zName, box[i].x, box[i].y, box[i].w, box[i].h, box[i].score * 100);
 		if( box[i].score < 0.3) continue;   /* Discard low score detection, remove if you want to report all objects */
+		/*
+		 * Draw a rose (RGB: 255,0,255) circle of width 3 on the object coordinates. */
+		sod_image_draw_circle_thickness(imgOut, box[i].x + (box[i].w / 2), box[i].y + (box[i].h / 2), box[i].w, 5, 255., 0, 225.);
+		/* Of course, one could draw a box via sod_image_draw_bbox_width() or 
+		 * crop the entire region via sod_crop_image() instead of drawing a circle. */
 	}
 	/* Finally save our output image with the boxes drawn on it */
+	sod_img_save_as_png(imgOut, zOut);
 	/* Cleanup */
 	sod_free_image(imgIn);
-	free(zInpbuf);
+	sod_free_image(imgOut);
 	/* Release all resources allocated to the CNN handle */
 	sod_cnn_destroy(pNet);
 	return 0;

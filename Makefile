@@ -39,18 +39,13 @@ WASMCFLAGS+= -mno-simd128 # https://github.com/webassembly/simd
 # %.wasm.c: %.wasm
 # 	wasm2c $< -o $@
 
-
-WASMLDFLAGS+= -Wl,-z,stack-size=64000 -Wl,--export=malloc -Wl,--export=free
-# WASMLDFLAGS+=-Wl,-z,stack-size=64000
-
-# It is unclear if CPU_FREQ was intentionally left off the wasm build or not
-CFLAGS+= -DSOD_DISABLE_CNN -DLIBCOX_DISABLE_DISK_IO -DCPU_FREQ=3600 
+CFLAGS+= -DLIBCOX_DISABLE_DISK_IO 
 LDFLAGS+= -lm
 
-WASMCFLAGS+= -D_WASI_EMULATED_MMAN -DWASM -DSOD_DISABLE_CNN -DLIBCOX_DISABLE_DISK_IO -DCPU_FREQ=3600 
-WASMLDFLAGS+= -lwasi-emulated-mman
+WASMCFLAGS+= -D_WASI_EMULATED_MMAN -DWASM -DLIBCOX_DISABLE_DISK_IO 
+WASMLDFLAGS+= -Wl,-z,stack-size=64000 -Wl,--export=malloc -Wl,--export=free -lwasi-emulated-mman
 
-SAMPLES = resize_image license_plate_detection
+SAMPLES = resize_image license_plate_detection cnn_face_detection
 
 RESIZE_IMAGE_HYPERFINE_ARGS = -w 10
 RESIZE_IMAGE_PRE =
@@ -58,6 +53,9 @@ RESIZE_IMAGE_POST = <$(abspath ./samples/plate.jpg)
 LICENSE_PLATE_DETECTION_HYPERFINE_ARGS = -w 10
 LICENSE_PLATE_DETECTION_PRE =
 LICENSE_PLATE_DETECTION_POST = <$(abspath ./samples/plate.jpg) 
+CNN_FACE_DETECTION_HYPERFINE_ARGS = -w 10
+CNN_FACE_DETECTIONN_PRE =
+CNN_FACE_DETECTION_POST = <$(abspath ./samples/cnn_faces.jpg) 
 
 .PHONY: all
 all: \
@@ -68,7 +66,11 @@ all: \
 	license_plate_detection.out \
 	license_plate_detection.wasm \
 	license_plate_detection.cwasm \
-	license_plate_detection.aot
+	license_plate_detection.aot \
+	cnn_face_detection.out \
+	cnn_face_detection.wasm \
+	cnn_face_detection.cwasm \
+	cnn_face_detection.aot
 
 .PHONY: samples
 samples: ${SAMPLES}
@@ -77,10 +79,10 @@ samples: ${SAMPLES}
 samples.wasm: ${SAMPLES:=.wasm}
 
 %.out: sod.c samples/%.c
-	@${CC} ${CFLAGS} ${LDFLAGS} $^ -o $@
+	${CC} ${CFLAGS} ${LDFLAGS} $^ -o $@
 
 %.wasm: sod.c samples/%.c
-	@${WASMCC} ${WASMCFLAGS} ${WASMLDFLAGS} $^ -o $@
+	${WASMCC} ${WASMCFLAGS} ${WASMLDFLAGS} $^ -o $@
 
 # Writes the resized image to temp.jpg
 .PHONY: resize_image.run_wasmtime_jit
@@ -110,11 +112,11 @@ resize_image.run_native: resize_image.out
 # Returns the coordinates of a bounding box where the license plate is located
 .PHONY: license_plate_detection.run
 license_plate_detection.run_wasmtime_jit: license_plate_detection.wasm
-	@${LICENSE_PLATE_DETECTION_PRE} wasmtime license_plate_detection.wasm ${LICENSE_PLATE_DETECTION_POST}
+	${LICENSE_PLATE_DETECTION_PRE} wasmtime license_plate_detection.wasm ${LICENSE_PLATE_DETECTION_POST}
 
 .PHONY: license_plate_detection.run_wasmtime_aot
 license_plate_detection.run_wasmtime_aot: license_plate_detection.cwasm
-	@${LICENSE_PLATE_DETECTION_PRE} wasmtime run --allow-precompiled license_plate_detection.cwasm ${LICENSE_PLATE_DETECTION_POST}
+	${LICENSE_PLATE_DETECTION_PRE} wasmtime run --allow-precompiled license_plate_detection.cwasm ${LICENSE_PLATE_DETECTION_POST}
 
 # Error: [trap] stack overflow
 # .PHONY: license_plate_detection.run_wasm3
@@ -132,7 +134,32 @@ license_plate_detection.run_wamr_aot: license_plate_detection.aot
 
 .PHONY: license_plate_detection.run_native
 license_plate_detection.run_native: license_plate_detection.out
-	@${LICENSE_PLATE_DETECTION_PRE} ./license_plate_detection.out ${LICENSE_PLATE_DETECTION_POST}
+	${LICENSE_PLATE_DETECTION_PRE} ./license_plate_detection.out ${LICENSE_PLATE_DETECTION_POST}
+
+# Writes the image to out.png and also prints out the coordinates of all the faces found
+.PHONY: cnn_face_detection.run_wasmtime_jit
+cnn_face_detection.run_wasmtime_jit: cnn_face_detection.wasm
+	${CNN_FACE_DETECTION_PRE} wasmtime cnn_face_detection.wasm ${CNN_FACE_DETECTION_POST}
+
+.PHONY: cnn_face_detection.run_wasmtime_aot
+cnn_face_detection.run_wasmtime_aot: cnn_face_detection.cwasm
+	${CNN_FACE_DETECTION_PRE} wasmtime run --allow-precompiled cnn_face_detection.cwasm ${CNN_FACE_DETECTION_POST}
+
+.PHONY: cnn_face_detection.run_wasm3
+cnn_face_detection.run_wasm3: cnn_face_detection.wasm
+	${CNN_FACE_DETECTION_PRE} wasm3 cnn_face_detection.wasm ${CNN_FACE_DETECTION_POST}
+
+.PHONY: cnn_face_detection.run_wamr_int
+cnn_face_detection.run_wamr_int: cnn_face_detection.wasm
+	${CNN_FACE_DETECTION_PRE} iwasm cnn_face_detection.wasm ${CNN_FACE_DETECTION_POST}
+
+.PHONY: cnn_face_detection.run_wamr_aot
+cnn_face_detection.run_wamr_aot: cnn_face_detection.aot
+	${CNN_FACE_DETECTION_PRE} iwasm cnn_face_detection.aot ${CNN_FACE_DETECTION_POST}
+
+.PHONY: cnn_face_detection.run_native
+cnn_face_detection.run_native: cnn_face_detection.out
+	${CNN_FACE_DETECTION_PRE} ./cnn_face_detection.out ${CNN_FACE_DETECTION_POST}
 
 .PHONY: clean
 clean:
@@ -160,3 +187,12 @@ resize_image.bench.csv: resize_image.wasm resize_image.cwasm resize_image.out re
 		-n resize_image_wamr_int                '${RESIZE_IMAGE_PRE} iwasm resize_image.wasm ${RESIZE_IMAGE_POST}' \
 		-n resize_image_wamr_aot                '${RESIZE_IMAGE_PRE} iwasm resize_image.aot ${RESIZE_IMAGE_POST}' \
 		-n resize_image_wasm3                   '${RESIZE_IMAGE_PRE} wasm3 resize_image.wasm ${RESIZE_IMAGE_POST}'
+
+cnn_face_detection.bench.csv: cnn_face_detection.wasm cnn_face_detection.cwasm cnn_face_detection.out cnn_face_detection.aot
+	hyperfine ${CNN_FACE_DETECTION_HYPERFINE_ARGS} --export-csv $@ \
+		-n cnn_face_detection_native                  '${CNN_FACE_DETECTION_PRE} ./cnn_face_detection.out ${CNN_FACE_DETECTION_POST}' \
+		-n cnn_face_detection_wasmtime_jit            '${CNN_FACE_DETECTION_PRE} wasmtime run cnn_face_detection.wasm ${CNN_FACE_DETECTION_POST}' \
+		-n cnn_face_detection_wasmtime_aot            '${CNN_FACE_DETECTION_PRE} wasmtime run --allow-precompiled cnn_face_detection.cwasm ${CNN_FACE_DETECTION_POST}' \
+		-n cnn_face_detection_wamr_int                '${CNN_FACE_DETECTION_PRE} iwasm cnn_face_detection.wasm ${CNN_FACE_DETECTION_POST}' \
+		-n cnn_face_detection_wamr_aot                '${CNN_FACE_DETECTION_PRE} iwasm cnn_face_detection.aot ${CNN_FACE_DETECTION_POST}' \
+		-n cnn_face_detection_wasm3                   '${CNN_FACE_DETECTION_PRE} wasm3 cnn_face_detection.wasm ${CNN_FACE_DETECTION_POST}'
