@@ -5,3 +5,4 @@ temp.jpg
 *.cwasm
 *.csv
 *.aot
+face_cnn.sod*

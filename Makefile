@@ -42,7 +42,7 @@ WASMCFLAGS+= -mno-simd128 # https://github.com/webassembly/simd
 CFLAGS+= -DLIBCOX_DISABLE_DISK_IO 
 LDFLAGS+= -lm
 
-WASMCFLAGS+= -D_WASI_EMULATED_MMAN -DWASM -DLIBCOX_DISABLE_DISK_IO 
+WASMCFLAGS+= -D_WASI_EMULATED_MMAN -DWASM  
 WASMLDFLAGS+= -Wl,-z,stack-size=64000 -Wl,--export=malloc -Wl,--export=free -lwasi-emulated-mman
 
 SAMPLES = resize_image license_plate_detection cnn_face_detection
