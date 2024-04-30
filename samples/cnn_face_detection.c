@@ -33,18 +33,19 @@
 /* Real-Time multi-scale face detection using SOD CNN */
 int main(int argc, char *argv[])
 {
+	size_t zImgSz = 0;
 	unsigned char *zInpbuf = NULL;
 	// unsigned long long s = get_time(), e;
 
 	zInpbuf = malloc(MAX_IMG_SIZE);
 	if (!zInpbuf) return -1;
 
-	size_t zImgSz = read(0, zInpbuf, MAX_IMG_SIZE);
-	if (zImgSz <= 0) {
-		if (zImgSz < 0) perror("read");
-		free(zInpbuf);
-		return -1;
+	ssize_t bytes_read;
+	while ((bytes_read = read(STDIN_FILENO, zInpbuf + zImgSz, MAX_IMG_SIZE - zImgSz)) > 0) {
+		zImgSz += bytes_read;
+		if (zImgSz >= MAX_IMG_SIZE) return -1;
 	}
+	if (zImgSz <= 0) return -1;
 
 	/* Load the input image in the grayscale colorspace */
 	sod_img imgIn = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_COLOR);

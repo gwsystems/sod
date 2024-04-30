@@ -31,24 +31,28 @@
 #include <stdlib.h>
 #include "sod.h"
 #include "get_time.h"
-#define MAX_IMG_SZ (1024*1024) //1MB
+#define MAX_IMG_SIZE (1024*1024) //1MB
 /*
 * Resize an image (Minify) to half its original size.
 */
 int main(int argc, char *argv[])
 {
 //	struct stat stbf;
-	size_t imgSz = 0;
+	size_t zImgSz = 0;
 	unsigned char *zInpbuf = NULL;
 	// unsigned long long s = get_time(), e;
 
-	zInpbuf = malloc(MAX_IMG_SZ);
+	zInpbuf = malloc(MAX_IMG_SIZE);
 	if (!zInpbuf) return -1;
 
-	imgSz = read(0, zInpbuf, MAX_IMG_SZ);
-	if (imgSz <= 0) return -1;
+	ssize_t bytes_read;
+	while ((bytes_read = read(STDIN_FILENO, zInpbuf + zImgSz, MAX_IMG_SIZE - zImgSz)) > 0) {
+		zImgSz += bytes_read;
+		if (zImgSz >= MAX_IMG_SIZE) return -1;
+	}
+	if (zImgSz <= 0) return -1;
 	
-	sod_img imgIn = sod_img_load_from_mem(zInpbuf, imgSz, SOD_IMG_COLOR /* full color channels */);
+	sod_img imgIn = sod_img_load_from_mem(zInpbuf, zImgSz, SOD_IMG_COLOR /* full color channels */);
 	if (imgIn.data == 0) {
 		/* Invalid path, unsupported format, memory failure, etc. */
 		printf("Error loading input\n");
